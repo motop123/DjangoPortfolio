@@ -22,6 +22,7 @@ from portfolio import settings
 
 urlpatterns = [
     path('', include('webapp.urls')),
+    path('blog/', include('blog.urls')),
     path('admin/', admin.site.urls),
 ]
 
