@@ -1,12 +1,11 @@
 from django.shortcuts import render
+from django.urls import reverse, reverse_lazy
 from django.views.generic import ListView, DetailView
+from django.views.generic.edit import FormMixin
 
 from blog.models import Post, Category, Comment
+from blog.form import CommentForm
 
-
-# def blog_index(request):
-#     posts = Post.objects.all().order_by('created_at')
-#     return render(request, 'blog/blog_index.html', {'posts': posts})
 
 
 class LBlogView(ListView):
@@ -18,16 +17,42 @@ class LBlogView(ListView):
         return posts
 
 
-# def blog_detail(request, pk):
-#     post = Post.objects.get(pk=pk)
-#     comments = Comment.objects.filter(post=post)
-#     context = {'post': post, 'comments': comments}
-#     return render(request, 'blog/blog_detail.html', context=context)
 
-
-class DetailBlogView(DetailView):
+class DetailBlogView(FormMixin, DetailView):
     model = Post
     template_name = 'blog/blog_detail.html'
+    form_class = CommentForm
+
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        form = self.get_form()
+
+        if form.is_valid():
+            comment = Comment(
+                author=form.cleaned_data['author'],
+                body=form.cleaned_data['body'],
+                post=self.object
+            )
+            comment.save()
+            return self.form_valid(form)
+        else:
+            return self.form_invalid(form)
+
+
+    def get_context_data(self, **kwargs):
+        context = super(DetailBlogView, self).get_context_data(**kwargs)
+        post = self.get_object()
+        comments = Comment.objects.filter(post=post).order_by('-created_at')
+        context['post'] = post
+        context['comments'] = comments
+        return context
+
+
+    def get_success_url(self):
+        print()
+        return reverse_lazy('blog:blog_detail', kwargs={'pk': self.object.id})
+
 
 
 def blog_category(request, category):
